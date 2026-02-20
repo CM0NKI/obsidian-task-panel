@@ -265,27 +265,47 @@ export class TaskPanelView extends ItemView {
 		// Scroll the task to the center of the editor
 		const editorEl = (editor as unknown as { cm: { scrollDOM: HTMLElement } }).cm?.scrollDOM;
 		if (editorEl) {
-			const lineInfo = editor.lineCount();
-			const coords = editor.posToOffset({ line: task.line, ch: 0 });
 			// Use requestAnimationFrame to let the cursor settle before scrolling
 			requestAnimationFrame(() => {
 				const cursorEl = editorEl.querySelector(".cm-cursor, .cm-activeLine");
 				if (cursorEl) {
 					cursorEl.scrollIntoView({ block: "center", behavior: "smooth" });
 				} else {
-					// Fallback: use scrollIntoView with center approximation
 					editor.scrollIntoView(
 						{ from: { line: task.line, ch: 0 }, to: { line: task.line, ch: 0 } },
 						true
 					);
 				}
+				this.flashLine(editorEl, task.line);
 			});
 		} else {
 			editor.scrollIntoView(
 				{ from: { line: task.line, ch: 0 }, to: { line: task.line, ch: 0 } },
 				true
 			);
+			if (editorEl) {
+				this.flashLine(editorEl, task.line);
+			}
 		}
+	}
+
+	/**
+	 * Temporarily highlight a line in the editor with a background flash.
+	 */
+	private flashLine(editorEl: HTMLElement, line: number): void {
+		// Find all .cm-line elements and pick the one at the target line
+		const cmContent = editorEl.querySelector(".cm-content");
+		if (!cmContent) return;
+
+		const lineElements = cmContent.querySelectorAll(".cm-line");
+		// cm-line elements correspond to visible lines; find the one with the active class
+		const activeLine = editorEl.querySelector(".cm-active.cm-line") as HTMLElement | null;
+		if (!activeLine) return;
+
+		activeLine.addClass("task-panel-flash");
+		setTimeout(() => {
+			activeLine.removeClass("task-panel-flash");
+		}, 1500);
 	}
 
 	/**

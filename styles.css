@@ -95,3 +95,13 @@
 	text-decoration: line-through;
 	color: var(--text-muted);
 }
+
+/* Flash highlight when navigating to a task in the editor */
+.task-panel-flash {
+	background-color: var(--text-highlight-bg) !important;
+	transition: background-color 0s;
+}
+
+.cm-line:not(.task-panel-flash) {
+	transition: background-color 1s ease-out;
+}
