@@ -1,6 +1,6 @@
 import { ItemView, MarkdownRenderer, MarkdownView, TFile, WorkspaceLeaf, debounce } from "obsidian";
 import type TaskPanelPlugin from "./main";
-import { Task, TaskGroup, countTasks, parseTasks } from "./taskParser";
+import { Task, TaskGroup, parseTasks } from "./taskParser";
 
 export const VIEW_TYPE_TASK_PANEL = "task-panel-view";
 
@@ -29,10 +29,14 @@ export class TaskPanelView extends ItemView {
 	async onOpen(): Promise<void> {
 		this.registerEvent(
 			this.app.workspace.on("file-open", (file) => {
-				this.onFileOpen(file);
+				this.currentFile = file;
+				this.refresh();
 			})
 		);
 
+		// metadataCache 'changed' is sufficient — it fires after the file is
+		// parsed and cachedRead already returns the latest content.
+		// No need to also listen to vault 'modify'.
 		this.registerEvent(
 			this.app.metadataCache.on("changed", (file) => {
 				if (this.currentFile && file.path === this.currentFile.path) {
@@ -42,19 +46,6 @@ export class TaskPanelView extends ItemView {
 		);
 
 		this.registerEvent(
-			this.app.vault.on("modify", (file) => {
-				if (
-					this.currentFile &&
-					file instanceof TFile &&
-					file.path === this.currentFile.path
-				) {
-					this.debouncedRefresh();
-				}
-			})
-		);
-
-		// Track file renames so currentFile reference stays valid
-		this.registerEvent(
 			this.app.vault.on("rename", (file, oldPath) => {
 				if (this.currentFile && oldPath === this.currentFile.path && file instanceof TFile) {
 					this.currentFile = file;
@@ -63,7 +54,6 @@ export class TaskPanelView extends ItemView {
 			})
 		);
 
-		// Clear panel when the active file is deleted
 		this.registerEvent(
 			this.app.vault.on("delete", (file) => {
 				if (this.currentFile && file.path === this.currentFile.path) {
@@ -73,16 +63,7 @@ export class TaskPanelView extends ItemView {
 			})
 		);
 
-		// Initial render
-		const activeFile = this.app.workspace.getActiveFile();
-		this.onFileOpen(activeFile);
-	}
-
-	/**
-	 * Public method for external callers (e.g. settings changes) to re-render
-	 * without re-registering event listeners.
-	 */
-	redraw(): void {
+		this.currentFile = this.app.workspace.getActiveFile();
 		this.refresh();
 	}
 
@@ -90,14 +71,14 @@ export class TaskPanelView extends ItemView {
 		this.contentEl.empty();
 	}
 
-	private onFileOpen(file: TFile | null): void {
-		this.currentFile = file;
+	/** Re-render without re-registering event listeners. */
+	redraw(): void {
 		this.refresh();
 	}
 
-	private debouncedRefresh = debounce(() => {
-		this.refresh();
-	}, 300, true);
+	// -- Refresh / render ------------------------------------------------
+
+	private debouncedRefresh = debounce(() => this.refresh(), 300, true);
 
 	private async refresh(): Promise<void> {
 		const container = this.contentEl;
@@ -114,30 +95,25 @@ export class TaskPanelView extends ItemView {
 			return;
 		}
 
-		const groups = await parseTasks(this.app, this.currentFile);
+		const { groups, totalOpen } = await parseTasks(this.app, this.currentFile);
 		const { showCompleted, groupByHeading } = this.plugin.settings;
 
-		const openCount = countTasks(groups, false);
-
-		if (openCount === 0 && !showCompleted) {
+		if (totalOpen === 0 && !showCompleted) {
 			this.renderEmpty("No open tasks");
 			return;
 		}
 
-		const listContainer = container.createDiv({ cls: "task-panel-list" });
+		const list = container.createDiv({ cls: "task-panel-list" });
 
 		if (groupByHeading) {
-			this.renderGrouped(listContainer, groups, showCompleted);
+			this.renderGrouped(list, groups, showCompleted);
 		} else {
-			this.renderFlat(listContainer, groups, showCompleted);
+			this.renderFlat(list, groups, showCompleted);
 		}
 	}
 
 	private renderEmpty(message: string): void {
-		this.contentEl.createDiv({
-			cls: "task-panel-empty",
-			text: message,
-		});
+		this.contentEl.createDiv({ cls: "task-panel-empty", text: message });
 	}
 
 	private renderGrouped(
@@ -146,12 +122,7 @@ export class TaskPanelView extends ItemView {
 		showCompleted: boolean
 	): void {
 		for (const group of groups) {
-			const openTasks = this.filterTasks(group.tasks, false);
-			const completedTasks = showCompleted
-				? this.filterTasks(group.tasks, true)
-				: [];
-
-			if (openTasks.length === 0 && completedTasks.length === 0) continue;
+			if (group.openCount === 0 && (!showCompleted || group.completedCount === 0)) continue;
 
 			const details = container.createEl("details", { cls: "task-panel-group" });
 			details.setAttribute("open", "");
@@ -160,12 +131,10 @@ export class TaskPanelView extends ItemView {
 			summary.createSpan({ text: group.heading, cls: "task-panel-heading-text" });
 
 			const taskList = details.createDiv({ cls: "task-panel-task-list" });
-			for (const task of openTasks) {
-				this.renderTask(taskList, task, 0);
-			}
+			this.renderTaskList(taskList, group.openTasks, 0);
 
-			for (const task of completedTasks) {
-				this.renderTask(taskList, task, 0);
+			if (showCompleted) {
+				this.renderTaskList(taskList, group.completedTasks, 0);
 			}
 		}
 	}
@@ -175,24 +144,25 @@ export class TaskPanelView extends ItemView {
 		groups: TaskGroup[],
 		showCompleted: boolean
 	): void {
-		const allOpen: Task[] = [];
-		const allCompleted: Task[] = [];
+		const taskList = container.createDiv({ cls: "task-panel-task-list" });
 		for (const group of groups) {
-			allOpen.push(...this.filterTasks(group.tasks, false));
-			if (showCompleted) {
-				allCompleted.push(...this.filterTasks(group.tasks, true));
+			this.renderTaskList(taskList, group.openTasks, 0);
+		}
+		if (showCompleted) {
+			for (const group of groups) {
+				this.renderTaskList(taskList, group.completedTasks, 0);
 			}
 		}
+	}
 
-		const taskList = container.createDiv({ cls: "task-panel-task-list" });
-		for (const task of allOpen) {
-			this.renderTask(taskList, task, 0);
-		}
-
-		for (const task of allCompleted) {
-			this.renderTask(taskList, task, 0);
+	private renderTaskList(container: HTMLElement, tasks: Task[], depth: number): void {
+		for (const task of tasks) {
+			this.renderTask(container, task, depth);
+			this.renderTaskList(container, task.children, depth + 1);
 		}
 	}
+
+	// -- Single task row -------------------------------------------------
 
 	private renderTask(container: HTMLElement, task: Task, depth: number): void {
 		const row = container.createDiv({ cls: "task-panel-task-row" });
@@ -203,9 +173,7 @@ export class TaskPanelView extends ItemView {
 			row.addClass("task-panel-completed");
 		}
 
-		const checkbox = row.createEl("input", {
-			attr: { type: "checkbox" },
-		});
+		const checkbox = row.createEl("input", { attr: { type: "checkbox" } });
 		checkbox.checked = task.completed;
 		checkbox.addClass("task-list-item-checkbox");
 		checkbox.addEventListener("click", (e) => {
@@ -216,69 +184,69 @@ export class TaskPanelView extends ItemView {
 		const textEl = row.createSpan({ cls: "task-panel-task-text" });
 		const sourcePath = this.currentFile?.path ?? "";
 		MarkdownRenderer.render(this.app, task.text, textEl, sourcePath, this);
-
-		// Post-process rendered internal links: add unresolved styling + hover preview
-		this.enhanceRenderedLinks(textEl, sourcePath);
+		this.enhanceLinks(textEl, sourcePath);
 
 		row.addEventListener("click", (e) => {
-			const target = e.target as HTMLElement;
-			if (target === checkbox) return;
-
-			// Handle tag clicks — open global search filtered to that tag
-			const tagEl = target.closest("a.tag") as HTMLElement | null;
-			if (tagEl) {
-				e.preventDefault();
-				const tag = tagEl.getText().trim();
-				(this.app as unknown as Record<string, unknown> & {
-					internalPlugins: {
-						getPluginById(id: string): { instance: { openGlobalSearch(query: string): void } } | null;
-					};
-				}).internalPlugins?.getPluginById("global-search")?.instance?.openGlobalSearch(`tag:${tag}`);
-				return;
-			}
-
-			// Handle internal link clicks
-			const linkEl = target.closest("a.internal-link") as HTMLAnchorElement | null;
-			if (linkEl) {
-				e.preventDefault();
-				const href = linkEl.getAttr("href");
-				if (href) {
-					// Cmd/Ctrl+click opens in new pane, plain click in current
-					const newLeaf = e.ctrlKey || e.metaKey;
-					this.app.workspace.openLinkText(href, sourcePath, newLeaf);
-				}
-				return;
-			}
-
-			// Don't navigate when clicking any other link (external, etc.)
-			if (target.closest("a")) return;
-
-			this.scrollToTask(task);
+			this.handleRowClick(e, checkbox, task);
 		});
-
-		// Render children recursively
-		for (const child of task.children) {
-			this.renderTask(container, child, depth + 1);
-		}
 	}
 
-	/**
-	 * Enhance rendered internal links with unresolved styling and hover preview.
-	 */
-	private enhanceRenderedLinks(container: HTMLElement, sourcePath: string): void {
+	// -- Click handling --------------------------------------------------
+
+	private handleRowClick(e: MouseEvent, checkbox: HTMLElement, task: Task): void {
+		const target = e.target as HTMLElement;
+		if (target === checkbox) return;
+
+		const tagEl = target.closest("a.tag") as HTMLElement | null;
+		if (tagEl) {
+			e.preventDefault();
+			this.openTagSearch(tagEl.getText().trim());
+			return;
+		}
+
+		const linkEl = target.closest("a.internal-link") as HTMLAnchorElement | null;
+		if (linkEl) {
+			e.preventDefault();
+			const href = linkEl.getAttr("href");
+			if (href) {
+				const newLeaf = e.ctrlKey || e.metaKey;
+				this.app.workspace.openLinkText(href, this.currentFile?.path ?? "", newLeaf);
+			}
+			return;
+		}
+
+		if (target.closest("a")) return;
+
+		this.scrollToTask(task);
+	}
+
+	private openTagSearch(tag: string): void {
+		const search = (
+			this.app as unknown as {
+				internalPlugins: {
+					getPluginById(id: string): {
+						instance: { openGlobalSearch(query: string): void };
+					} | null;
+				};
+			}
+		).internalPlugins?.getPluginById("global-search");
+
+		search?.instance?.openGlobalSearch(`tag:${tag}`);
+	}
+
+	// -- Link enhancement ------------------------------------------------
+
+	private enhanceLinks(container: HTMLElement, sourcePath: string): void {
 		const links = container.querySelectorAll("a.internal-link");
 		for (let i = 0; i < links.length; i++) {
 			const link = links[i] as HTMLAnchorElement;
 			const href = link.getAttr("href");
 			if (!href) continue;
 
-			// Mark unresolved links (pages that don't exist)
-			const resolved = this.app.metadataCache.getFirstLinkpathDest(href, sourcePath);
-			if (!resolved) {
+			if (!this.app.metadataCache.getFirstLinkpathDest(href, sourcePath)) {
 				link.addClass("is-unresolved");
 			}
 
-			// Register hover preview (Page Preview / hover popover)
 			link.addEventListener("mouseover", (e) => {
 				this.app.workspace.trigger("hover-link", {
 					event: e,
@@ -292,6 +260,8 @@ export class TaskPanelView extends ItemView {
 		}
 	}
 
+	// -- Task toggling ---------------------------------------------------
+
 	private async toggleTask(task: Task): Promise<void> {
 		if (!this.currentFile) return;
 
@@ -300,82 +270,67 @@ export class TaskPanelView extends ItemView {
 		const line = lines[task.line];
 		if (line === undefined) return;
 
-		let newLine: string;
 		if (task.completed) {
-			// Uncheck: replace [x] or [X] with [ ]
-			newLine = line.replace(/\[.\]/, "[ ]");
+			lines[task.line] = line.replace(/\[.\]/, "[ ]");
 		} else {
-			// Check: replace [ ] with [x]
-			newLine = line.replace(/\[ \]/, "[x]");
+			lines[task.line] = line.replace(/\[ \]/, "[x]");
 		}
 
-		lines[task.line] = newLine;
 		await this.app.vault.modify(this.currentFile, lines.join("\n"));
 	}
+
+	// -- Scroll to task --------------------------------------------------
 
 	private scrollToTask(task: Task): void {
 		if (!this.currentFile) return;
 
-		// Find the markdown leaf for the current file — can't use getActiveViewOfType
-		// because clicking the panel makes it the active leaf.
-		const leaves = this.app.workspace.getLeavesOfType("markdown");
-		let target: MarkdownView | null = null;
-		for (const leaf of leaves) {
-			if (
-				leaf.view instanceof MarkdownView &&
-				leaf.view.file?.path === this.currentFile.path
-			) {
-				target = leaf.view;
-				break;
-			}
-		}
-
+		const target = this.findEditorForFile(this.currentFile);
 		if (!target) return;
 
-		// Focus the editor leaf first, then scroll
 		this.app.workspace.revealLeaf(target.leaf);
 
 		const editor = target.editor;
 		editor.setCursor({ line: task.line, ch: 0 });
 
-		// Scroll the task to the center of the editor
-		const editorEl = (editor as unknown as { cm: { scrollDOM: HTMLElement } }).cm?.scrollDOM;
-		if (editorEl) {
-			// Use requestAnimationFrame to let the cursor settle before scrolling
+		const scrollEl = this.getScrollElement(editor);
+		if (scrollEl) {
 			requestAnimationFrame(() => {
-				const cursorEl = editorEl.querySelector(".cm-cursor, .cm-activeLine");
-				if (cursorEl) {
-					cursorEl.scrollIntoView({ block: "center", behavior: "smooth" });
+				const activeLine = scrollEl.querySelector(".cm-active.cm-line");
+				if (activeLine) {
+					activeLine.scrollIntoView({ block: "center", behavior: "smooth" });
 				} else {
 					editor.scrollIntoView(
 						{ from: { line: task.line, ch: 0 }, to: { line: task.line, ch: 0 } },
 						true
 					);
 				}
-				this.flashLine(editorEl, task.line);
+				this.flashLine(scrollEl);
 			});
 		} else {
 			editor.scrollIntoView(
 				{ from: { line: task.line, ch: 0 }, to: { line: task.line, ch: 0 } },
 				true
 			);
-			if (editorEl) {
-				this.flashLine(editorEl, task.line);
-			}
 		}
 	}
 
-	/**
-	 * Temporarily highlight a line in the editor with a background flash.
-	 */
-	private flashLine(editorEl: HTMLElement, line: number): void {
-		// Find all .cm-line elements and pick the one at the target line
-		const cmContent = editorEl.querySelector(".cm-content");
-		if (!cmContent) return;
+	private findEditorForFile(file: TFile): MarkdownView | null {
+		for (const leaf of this.app.workspace.getLeavesOfType("markdown")) {
+			if (leaf.view instanceof MarkdownView && leaf.view.file?.path === file.path) {
+				return leaf.view;
+			}
+		}
+		return null;
+	}
 
-		const lineElements = cmContent.querySelectorAll(".cm-line");
-		// cm-line elements correspond to visible lines; find the one with the active class
-		const activeLine = editorEl.querySelector(".cm-active.cm-line") as HTMLElement | null;
+	private getScrollElement(editor: unknown): HTMLElement | null {
+		return (editor as { cm?: { scrollDOM?: HTMLElement } })?.cm?.scrollDOM ?? null;
+	}
+
+	// -- Flash highlight -------------------------------------------------
+
+	private flashLine(scrollEl: HTMLElement): void {
+		const activeLine = scrollEl.querySelector(".cm-active.cm-line") as HTMLElement | null;
 		if (!activeLine) return;
 
 		activeLine.addClass("task-panel-flash");
@@ -383,25 +338,4 @@ export class TaskPanelView extends ItemView {
 			activeLine.removeClass("task-panel-flash");
 		}, 1500);
 	}
-
-	/**
-	 * Filter tasks, collecting from both root and children.
-	 * Returns a flat list of matching tasks (completed or open).
-	 */
-	private filterTasks(tasks: Task[], completed: boolean): Task[] {
-		const result: Task[] = [];
-
-		function walk(taskList: Task[]): void {
-			for (const task of taskList) {
-				if (task.completed === completed) {
-					result.push(task);
-				}
-				walk(task.children);
-			}
-		}
-
-		walk(tasks);
-		return result;
-	}
-
 }
