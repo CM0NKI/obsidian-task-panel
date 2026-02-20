@@ -7,7 +7,7 @@ export interface TaskPanelSettings {
 }
 
 export const DEFAULT_SETTINGS: TaskPanelSettings = {
-	showCompleted: false,
+	showCompleted: true,
 	groupByHeading: true,
 };
 

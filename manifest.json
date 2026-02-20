@@ -4,6 +4,7 @@
 	"version": "1.0.0",
 	"minAppVersion": "1.0.0",
 	"description": "A sidebar panel that dynamically shows all open tasks from the currently active note.",
-	"author": "Peter",
+	"author": "n00wb",
+	"authorUrl": "https://github.com/CM0NKI",
 	"isDesktopOnly": false
 }
