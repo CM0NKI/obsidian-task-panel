@@ -58,6 +58,14 @@ export class TaskPanelView extends ItemView {
 		this.onFileOpen(activeFile);
 	}
 
+	/**
+	 * Public method for external callers (e.g. settings changes) to re-render
+	 * without re-registering event listeners.
+	 */
+	redraw(): void {
+		this.refresh();
+	}
+
 	async onClose(): Promise<void> {
 		this.contentEl.empty();
 	}
@@ -194,7 +202,9 @@ export class TaskPanelView extends ItemView {
 			row.addClass("task-panel-completed");
 		}
 
-		const checkbox = row.createEl("input", { type: "checkbox" });
+		const checkbox = row.createEl("input", {
+			attr: { type: "checkbox" },
+		});
 		checkbox.checked = task.completed;
 		checkbox.addClass("task-list-item-checkbox");
 		checkbox.addEventListener("click", (e) => {

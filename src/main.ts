@@ -26,13 +26,6 @@ export default class TaskPanelPlugin extends Plugin {
 		});
 
 		this.addSettingTab(new TaskPanelSettingTab(this.app, this));
-
-		// Re-render the view when settings change
-		this.registerEvent(
-			this.app.workspace.on("layout-change", () => {
-				this.refreshViews();
-			})
-		);
 	}
 
 	onunload(): void {
@@ -57,7 +50,7 @@ export default class TaskPanelPlugin extends Plugin {
 		for (const leaf of leaves) {
 			const view = leaf.view;
 			if (view instanceof TaskPanelView) {
-				view.onOpen();
+				view.redraw();
 			}
 		}
 	}
