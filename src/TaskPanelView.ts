@@ -212,8 +212,10 @@ export class TaskPanelView extends ItemView {
 			this.toggleTask(task);
 		});
 
-		const text = row.createSpan({ text: task.text, cls: "task-panel-task-text" });
-		text.addEventListener("click", () => {
+		row.createSpan({ text: task.text, cls: "task-panel-task-text" });
+		row.addEventListener("click", (e) => {
+			// Don't navigate when clicking the checkbox
+			if (e.target === checkbox) return;
 			this.scrollToTask(task);
 		});
 
@@ -245,10 +247,28 @@ export class TaskPanelView extends ItemView {
 	}
 
 	private scrollToTask(task: Task): void {
-		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-		if (!view) return;
+		if (!this.currentFile) return;
 
-		const editor = view.editor;
+		// Find the markdown leaf for the current file — can't use getActiveViewOfType
+		// because clicking the panel makes it the active leaf.
+		const leaves = this.app.workspace.getLeavesOfType("markdown");
+		let target: MarkdownView | null = null;
+		for (const leaf of leaves) {
+			if (
+				leaf.view instanceof MarkdownView &&
+				leaf.view.file?.path === this.currentFile.path
+			) {
+				target = leaf.view;
+				break;
+			}
+		}
+
+		if (!target) return;
+
+		// Focus the editor leaf first, then scroll
+		this.app.workspace.revealLeaf(target.leaf);
+
+		const editor = target.editor;
 		editor.setCursor({ line: task.line, ch: 0 });
 		editor.scrollIntoView(
 			{ from: { line: task.line, ch: 0 }, to: { line: task.line, ch: 0 } },
