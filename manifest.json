@@ -3,7 +3,7 @@
 	"name": "Task Panel",
 	"version": "1.0.0",
 	"minAppVersion": "1.0.0",
-	"description": "A sidebar panel that dynamically shows all open tasks from the currently active note.",
+	"description": "A sidebar panel that shows all tasks from the active note, grouped by heading, always in sync.",
 	"author": "n00wb",
 	"authorUrl": "https://github.com/CM0NKI",
 	"isDesktopOnly": false
