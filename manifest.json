@@ -1,0 +1,9 @@
+{
+	"id": "task-panel",
+	"name": "Task Panel",
+	"version": "1.0.0",
+	"minAppVersion": "1.0.0",
+	"description": "A sidebar panel that dynamically shows all open tasks from the currently active note.",
+	"author": "Peter",
+	"isDesktopOnly": false
+}
