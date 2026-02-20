@@ -4,13 +4,11 @@ import type TaskPanelPlugin from "./main";
 export interface TaskPanelSettings {
 	showCompleted: boolean;
 	groupByHeading: boolean;
-	sortOrder: "file-order" | "alphabetical";
 }
 
 export const DEFAULT_SETTINGS: TaskPanelSettings = {
 	showCompleted: false,
 	groupByHeading: true,
-	sortOrder: "file-order",
 };
 
 export class TaskPanelSettingTab extends PluginSettingTab {
@@ -53,18 +51,5 @@ export class TaskPanelSettingTab extends PluginSettingTab {
 					})
 			);
 
-		new Setting(containerEl)
-			.setName("Sort order")
-			.setDesc("How tasks are sorted within each group.")
-			.addDropdown((dropdown) =>
-				dropdown
-					.addOption("file-order", "File order")
-					.addOption("alphabetical", "Alphabetical")
-					.setValue(this.plugin.settings.sortOrder)
-					.onChange(async (value) => {
-						this.plugin.settings.sortOrder = value as TaskPanelSettings["sortOrder"];
-						await this.plugin.saveSettings();
-					})
-			);
 	}
 }

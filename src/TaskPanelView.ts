@@ -95,7 +95,7 @@ export class TaskPanelView extends ItemView {
 		}
 
 		const groups = await parseTasks(this.app, this.currentFile);
-		const { showCompleted, groupByHeading, sortOrder } = this.plugin.settings;
+		const { showCompleted, groupByHeading } = this.plugin.settings;
 
 		const openCount = countTasks(groups, false);
 
@@ -107,9 +107,9 @@ export class TaskPanelView extends ItemView {
 		const listContainer = container.createDiv({ cls: "task-panel-list" });
 
 		if (groupByHeading) {
-			this.renderGrouped(listContainer, groups, sortOrder, showCompleted);
+			this.renderGrouped(listContainer, groups, showCompleted);
 		} else {
-			this.renderFlat(listContainer, groups, sortOrder, showCompleted);
+			this.renderFlat(listContainer, groups, showCompleted);
 		}
 	}
 
@@ -123,7 +123,6 @@ export class TaskPanelView extends ItemView {
 	private renderGrouped(
 		container: HTMLElement,
 		groups: TaskGroup[],
-		sortOrder: string,
 		showCompleted: boolean
 	): void {
 		for (const group of groups) {
@@ -141,16 +140,12 @@ export class TaskPanelView extends ItemView {
 			summary.createSpan({ text: group.heading, cls: "task-panel-heading-text" });
 
 			const taskList = details.createDiv({ cls: "task-panel-task-list" });
-			const sorted = this.sortTasks(openTasks, sortOrder);
-			for (const task of sorted) {
+			for (const task of openTasks) {
 				this.renderTask(taskList, task, 0);
 			}
 
-			if (completedTasks.length > 0) {
-				const completedSorted = this.sortTasks(completedTasks, sortOrder);
-				for (const task of completedSorted) {
-					this.renderTask(taskList, task, 0);
-				}
+			for (const task of completedTasks) {
+				this.renderTask(taskList, task, 0);
 			}
 		}
 	}
@@ -158,7 +153,6 @@ export class TaskPanelView extends ItemView {
 	private renderFlat(
 		container: HTMLElement,
 		groups: TaskGroup[],
-		sortOrder: string,
 		showCompleted: boolean
 	): void {
 		const allOpen: Task[] = [];
@@ -171,16 +165,12 @@ export class TaskPanelView extends ItemView {
 		}
 
 		const taskList = container.createDiv({ cls: "task-panel-task-list" });
-		const sorted = this.sortTasks(allOpen, sortOrder);
-		for (const task of sorted) {
+		for (const task of allOpen) {
 			this.renderTask(taskList, task, 0);
 		}
 
-		if (allCompleted.length > 0) {
-			const completedSorted = this.sortTasks(allCompleted, sortOrder);
-			for (const task of completedSorted) {
-				this.renderTask(taskList, task, 0);
-			}
+		for (const task of allCompleted) {
+			this.renderTask(taskList, task, 0);
 		}
 	}
 
@@ -328,11 +318,4 @@ export class TaskPanelView extends ItemView {
 		return result;
 	}
 
-	private sortTasks(tasks: Task[], sortOrder: string): Task[] {
-		if (sortOrder === "alphabetical") {
-			return [...tasks].sort((a, b) => a.text.localeCompare(b.text));
-		}
-		// File order: sort by line number
-		return [...tasks].sort((a, b) => a.line - b.line);
-	}
 }
