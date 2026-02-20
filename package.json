@@ -1,7 +1,7 @@
 {
 	"name": "obsidian-task-panel",
 	"version": "1.0.0",
-	"description": "A sidebar panel that dynamically shows all open tasks from the currently active note.",
+	"description": "A sidebar panel that shows all tasks from the active note, grouped by heading, always in sync.",
 	"main": "main.js",
 	"type": "module",
 	"scripts": {
