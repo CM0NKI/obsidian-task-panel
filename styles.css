@@ -2,13 +2,6 @@
 	padding: 0;
 }
 
-.task-panel-empty {
-	padding: 24px 12px;
-	text-align: center;
-	color: var(--text-muted);
-	font-size: var(--font-ui-small);
-}
-
 .task-panel-list {
 	padding: 4px 0;
 }
@@ -68,6 +61,7 @@
 	display: flex;
 	align-items: flex-start;
 	padding: 3px 12px;
+	min-height: 28px;
 	gap: 6px;
 	cursor: pointer;
 }
@@ -75,6 +69,13 @@
 .task-panel-task-row:hover {
 	background: var(--background-modifier-hover);
 }
+
+/* Indentation for nested tasks */
+.task-panel-task-row[data-depth="1"] { padding-left: 32px; }
+.task-panel-task-row[data-depth="2"] { padding-left: 52px; }
+.task-panel-task-row[data-depth="3"] { padding-left: 72px; }
+.task-panel-task-row[data-depth="4"] { padding-left: 92px; }
+.task-panel-task-row[data-depth="5"] { padding-left: 112px; }
 
 .task-panel-task-row .task-list-item-checkbox {
 	margin: 0;
@@ -125,6 +126,20 @@
 
 .task-panel-task-text s {
 	color: var(--text-faint);
+}
+
+/* Focus indicators for keyboard navigation */
+.task-panel-task-row:focus-visible {
+	background: var(--background-modifier-hover);
+	outline: 2px solid var(--interactive-accent);
+	outline-offset: -2px;
+	border-radius: var(--radius-s);
+}
+
+.task-panel-group-heading:focus-visible {
+	outline: 2px solid var(--interactive-accent);
+	outline-offset: -2px;
+	border-radius: var(--radius-s);
 }
 
 /* Completed tasks */
