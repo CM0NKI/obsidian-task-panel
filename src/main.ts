@@ -26,6 +26,19 @@ export default class TaskPanelPlugin extends Plugin {
 		});
 
 		this.addSettingTab(new TaskPanelSettingTab(this.app, this));
+
+		// Restore the view if it was open in a previous session
+		this.app.workspace.onLayoutReady(() => {
+			const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_TASK_PANEL);
+			if (leaves.length > 0) {
+				// View already restored by layout — trigger a refresh
+				for (const leaf of leaves) {
+					if (leaf.view instanceof TaskPanelView) {
+						leaf.view.redraw();
+					}
+				}
+			}
+		});
 	}
 
 	onunload(): void {

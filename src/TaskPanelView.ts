@@ -53,6 +53,26 @@ export class TaskPanelView extends ItemView {
 			})
 		);
 
+		// Track file renames so currentFile reference stays valid
+		this.registerEvent(
+			this.app.vault.on("rename", (file, oldPath) => {
+				if (this.currentFile && oldPath === this.currentFile.path && file instanceof TFile) {
+					this.currentFile = file;
+					this.refresh();
+				}
+			})
+		);
+
+		// Clear panel when the active file is deleted
+		this.registerEvent(
+			this.app.vault.on("delete", (file) => {
+				if (this.currentFile && file.path === this.currentFile.path) {
+					this.currentFile = null;
+					this.refresh();
+				}
+			})
+		);
+
 		// Initial render
 		const activeFile = this.app.workspace.getActiveFile();
 		this.onFileOpen(activeFile);
@@ -197,6 +217,9 @@ export class TaskPanelView extends ItemView {
 		const sourcePath = this.currentFile?.path ?? "";
 		MarkdownRenderer.render(this.app, task.text, textEl, sourcePath, this);
 
+		// Post-process rendered internal links: add unresolved styling + hover preview
+		this.enhanceRenderedLinks(textEl, sourcePath);
+
 		row.addEventListener("click", (e) => {
 			const target = e.target as HTMLElement;
 			if (target === checkbox) return;
@@ -214,7 +237,20 @@ export class TaskPanelView extends ItemView {
 				return;
 			}
 
-			// Don't navigate when clicking any other link (internal/external)
+			// Handle internal link clicks
+			const linkEl = target.closest("a.internal-link") as HTMLAnchorElement | null;
+			if (linkEl) {
+				e.preventDefault();
+				const href = linkEl.getAttr("href");
+				if (href) {
+					// Cmd/Ctrl+click opens in new pane, plain click in current
+					const newLeaf = e.ctrlKey || e.metaKey;
+					this.app.workspace.openLinkText(href, sourcePath, newLeaf);
+				}
+				return;
+			}
+
+			// Don't navigate when clicking any other link (external, etc.)
 			if (target.closest("a")) return;
 
 			this.scrollToTask(task);
@@ -223,6 +259,36 @@ export class TaskPanelView extends ItemView {
 		// Render children recursively
 		for (const child of task.children) {
 			this.renderTask(container, child, depth + 1);
+		}
+	}
+
+	/**
+	 * Enhance rendered internal links with unresolved styling and hover preview.
+	 */
+	private enhanceRenderedLinks(container: HTMLElement, sourcePath: string): void {
+		const links = container.querySelectorAll("a.internal-link");
+		for (let i = 0; i < links.length; i++) {
+			const link = links[i] as HTMLAnchorElement;
+			const href = link.getAttr("href");
+			if (!href) continue;
+
+			// Mark unresolved links (pages that don't exist)
+			const resolved = this.app.metadataCache.getFirstLinkpathDest(href, sourcePath);
+			if (!resolved) {
+				link.addClass("is-unresolved");
+			}
+
+			// Register hover preview (Page Preview / hover popover)
+			link.addEventListener("mouseover", (e) => {
+				this.app.workspace.trigger("hover-link", {
+					event: e,
+					source: VIEW_TYPE_TASK_PANEL,
+					hoverParent: this,
+					targetEl: link,
+					linktext: href,
+					sourcePath,
+				});
+			});
 		}
 	}
 
