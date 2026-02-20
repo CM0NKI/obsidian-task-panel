@@ -199,8 +199,24 @@ export class TaskPanelView extends ItemView {
 
 		row.addEventListener("click", (e) => {
 			const target = e.target as HTMLElement;
-			// Don't navigate when clicking the checkbox or a link
-			if (target === checkbox || target.closest("a")) return;
+			if (target === checkbox) return;
+
+			// Handle tag clicks — open global search filtered to that tag
+			const tagEl = target.closest("a.tag") as HTMLElement | null;
+			if (tagEl) {
+				e.preventDefault();
+				const tag = tagEl.getText().trim();
+				(this.app as unknown as Record<string, unknown> & {
+					internalPlugins: {
+						getPluginById(id: string): { instance: { openGlobalSearch(query: string): void } } | null;
+					};
+				}).internalPlugins?.getPluginById("global-search")?.instance?.openGlobalSearch(`tag:${tag}`);
+				return;
+			}
+
+			// Don't navigate when clicking any other link (internal/external)
+			if (target.closest("a")) return;
+
 			this.scrollToTask(task);
 		});
 
