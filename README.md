@@ -1,48 +1,63 @@
-# Task Panel
+# Task Panel for Obsidian
 
-An Obsidian plugin that adds a sidebar panel showing all open tasks from the currently active note.
+A plugin for [Obsidian](https://obsidian.md) that adds a sidebar panel showing all tasks from your active note, grouped by heading, always in sync.
+
+If you've got long notes with checkboxes scattered across different sections, you know the pain. Task Panel puts them all in one place, right in the sidebar for an easy overview and access.
+
+![Task Panel in action](screenshots/task-panel-overview.png)
 
 ## Features
 
-- **Sidebar panel** — appears in the right sidebar alongside Outline and Tags
-- **Live updates** — automatically refreshes when switching notes or editing tasks
-- **Grouped by heading** — tasks are organized under their parent headings (like the Outline view)
-- **Clickable tasks** — click a task to scroll to it in the editor
-- **Toggle completion** — check off tasks directly from the panel
-- **Nested tasks** — sub-tasks are rendered indented under their parent
-- **Theme-aware** — uses Obsidian's CSS variables, works with any theme including dark mode
+- **Grouped by heading** - collapsible groups, same structure as the Outline view
+- **Native link behavior** - `[[links]]` work like in the editor: click, hover preview, `Cmd`/`Ctrl`+click for new tab
+- **Tags** - clickable `#tags` that open a global search, same as in reading view
+- **Click to navigate** - click a task to jump to that line in the editor
+- **Toggle completion** - check off tasks directly from the panel
+- **Nested tasks** - sub-tasks render indented, keeping your hierarchy intact
+- **Rich text** - bold, italic, code, strikethrough, highlights, links and tags all render with your theme's colors
+- **Live updates** - refreshes on file switch, edit, rename or delete
+- **Persistent layout** - remembers its position across sessions
 
 ## Settings
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| Show completed tasks | Off | Show `- [x]` tasks as struck-through at the bottom of each group |
-| Group by heading | On | Group tasks under their parent heading, or show a flat list |
-| Sort order | File order | Sort tasks by file order or alphabetically |
+| Show completed tasks | On | Show completed tasks as struck-through at the bottom of each group |
+| Group by heading | On | Group tasks under their parent headings, or show a flat list |
 
-## Commands
+## Usage
 
-- **Task Panel: Show task panel** — opens or reveals the sidebar panel (assignable to a hotkey)
+Open the panel via:
+- The **checklist icon** in the ribbon
+- Command palette: **Show task panel**
+
+## Installation
+
+### Community plugins
+Not available in the community plugin store yet.
+
+### Manual
+1. Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](https://github.com/CM0NKI/obsidian-task-panel/releases/latest)
+2. Create `.obsidian/plugins/task-panel/` in your vault
+3. Drop the three files in there
+4. Enable **Task Panel** in Settings > Community plugins
 
 ## Development
 
 ```bash
+git clone https://github.com/CM0NKI/obsidian-task-panel.git
+cd obsidian-task-panel
 npm install
-npm run dev    # watch mode with sourcemaps
+npm run dev    # watch mode
 npm run build  # production build
 ```
 
-## Installation
+## Credits
 
-### From source
+Thanks to the [Obsidian](https://obsidian.md) team for building a tool that saves my life on a daily basis.
 
-1. Clone this repo into your vault's `.obsidian/plugins/` directory
-2. Run `npm install && npm run build`
-3. Enable "Task Panel" in Settings → Community plugins
+Plugin built with [Claude Opus 4.6](https://claude.ai) by Anthropic and the [Obsidian Plugin Skill](https://github.com/gapmiss/obsidian-plugin-skill) for Claude Code.
 
-### Manual
+## License
 
-1. Download `main.js`, `manifest.json`, and `styles.css` from the latest release
-2. Create a folder `.obsidian/plugins/task-panel/` in your vault
-3. Copy the three files into that folder
-4. Enable "Task Panel" in Settings → Community plugins
+[MIT](LICENSE)
