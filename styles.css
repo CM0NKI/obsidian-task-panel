@@ -88,6 +88,19 @@
 	color: var(--text-normal);
 	line-height: 1.5;
 	word-break: break-word;
+	min-width: 0;
+	flex: 1;
+}
+
+/* Remove paragraph margins from rendered markdown inside task text */
+.task-panel-task-text p {
+	margin: 0;
+	display: inline;
+}
+
+.task-panel-task-text a.internal-link,
+.task-panel-task-text a.external-link {
+	cursor: pointer;
 }
 
 /* Completed tasks */

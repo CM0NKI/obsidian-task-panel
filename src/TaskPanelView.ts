@@ -1,4 +1,4 @@
-import { ItemView, MarkdownView, TFile, WorkspaceLeaf, debounce } from "obsidian";
+import { ItemView, MarkdownRenderer, MarkdownView, TFile, WorkspaceLeaf, debounce } from "obsidian";
 import type TaskPanelPlugin from "./main";
 import { Task, TaskGroup, countTasks, parseTasks } from "./taskParser";
 
@@ -193,10 +193,14 @@ export class TaskPanelView extends ItemView {
 			this.toggleTask(task);
 		});
 
-		row.createSpan({ text: task.text, cls: "task-panel-task-text" });
+		const textEl = row.createSpan({ cls: "task-panel-task-text" });
+		const sourcePath = this.currentFile?.path ?? "";
+		MarkdownRenderer.render(this.app, task.text, textEl, sourcePath, this);
+
 		row.addEventListener("click", (e) => {
-			// Don't navigate when clicking the checkbox
-			if (e.target === checkbox) return;
+			const target = e.target as HTMLElement;
+			// Don't navigate when clicking the checkbox or a rendered link
+			if (target === checkbox || target.closest("a.internal-link, a.external-link")) return;
 			this.scrollToTask(task);
 		});
 
