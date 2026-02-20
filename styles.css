@@ -92,26 +92,39 @@
 	flex: 1;
 }
 
-.task-panel-task-text a.internal-link {
-	color: var(--link-color);
-	cursor: pointer;
-	text-decoration-line: var(--link-decoration);
+/* Rendered markdown inside task text — flatten block elements */
+.task-panel-task-text p {
+	margin: 0;
+	display: inline;
 }
 
-.task-panel-task-text a.internal-link:hover {
-	color: var(--link-color-hover);
-	text-decoration-line: var(--link-decoration-hover);
+.task-panel-task-text mark {
+	background-color: var(--text-highlight-bg);
+	color: var(--text-highlight-fg, inherit);
+	padding: 1px 2px;
+	border-radius: var(--radius-xs);
 }
 
-.task-panel-task-text a.external-link {
-	color: var(--link-external-color);
-	cursor: pointer;
-	text-decoration-line: var(--link-external-decoration);
+.task-panel-task-text strong {
+	font-weight: var(--font-semibold);
+	color: var(--bold-color, var(--text-normal));
 }
 
-.task-panel-task-text a.external-link:hover {
-	color: var(--link-external-color-hover);
-	text-decoration-line: var(--link-external-decoration-hover);
+.task-panel-task-text em {
+	color: var(--italic-color, var(--text-normal));
+}
+
+.task-panel-task-text code {
+	font-family: var(--font-monospace);
+	font-size: var(--code-size);
+	background-color: var(--code-background);
+	color: var(--code-normal);
+	padding: 1px 4px;
+	border-radius: var(--radius-xs);
+}
+
+.task-panel-task-text s {
+	color: var(--text-faint);
 }
 
 /* Completed tasks */

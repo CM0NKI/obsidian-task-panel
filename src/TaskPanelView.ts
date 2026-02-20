@@ -1,4 +1,4 @@
-import { ItemView, MarkdownView, TFile, WorkspaceLeaf, debounce } from "obsidian";
+import { ItemView, MarkdownRenderer, MarkdownView, TFile, WorkspaceLeaf, debounce } from "obsidian";
 import type TaskPanelPlugin from "./main";
 import { Task, TaskGroup, countTasks, parseTasks } from "./taskParser";
 
@@ -194,7 +194,8 @@ export class TaskPanelView extends ItemView {
 		});
 
 		const textEl = row.createSpan({ cls: "task-panel-task-text" });
-		this.renderTaskText(textEl, task.text);
+		const sourcePath = this.currentFile?.path ?? "";
+		MarkdownRenderer.render(this.app, task.text, textEl, sourcePath, this);
 
 		row.addEventListener("click", (e) => {
 			const target = e.target as HTMLElement;
@@ -207,74 +208,6 @@ export class TaskPanelView extends ItemView {
 		for (const child of task.children) {
 			this.renderTask(container, child, depth + 1);
 		}
-	}
-
-	/**
-	 * Render task text as plain text with clickable internal/external links.
-	 * Strips markdown formatting (highlights, bold, italic, etc.).
-	 */
-	private renderTaskText(container: HTMLElement, text: string): void {
-		// Pattern to match [[internal links]] and [external links](url)
-		const linkPattern = /\[\[([^\]]+)\]\]|\[([^\]]+)\]\(([^)]+)\)/g;
-
-		let lastIndex = 0;
-		let match: RegExpExecArray | null;
-
-		while ((match = linkPattern.exec(text)) !== null) {
-			// Add plain text before the link (stripped of markdown)
-			if (match.index > lastIndex) {
-				container.appendText(this.stripMarkdown(text.slice(lastIndex, match.index)));
-			}
-
-			if (match[1] !== undefined) {
-				// Internal link: [[target]] or [[target|alias]]
-				const parts = match[1].split("|");
-				const target = parts[0]!;
-				const alias = parts[1] ?? target;
-
-				const link = container.createEl("a", {
-					cls: "internal-link",
-					text: alias,
-				});
-				link.addEventListener("click", (e) => {
-					e.stopPropagation();
-					this.app.workspace.openLinkText(target, this.currentFile?.path ?? "");
-				});
-			} else if (match[2] !== undefined && match[3] !== undefined) {
-				// External link: [text](url)
-				const link = container.createEl("a", {
-					cls: "external-link",
-					text: match[2],
-					href: match[3],
-				});
-				link.setAttr("target", "_blank");
-				link.setAttr("rel", "noopener");
-				link.addEventListener("click", (e) => {
-					e.stopPropagation();
-				});
-			}
-
-			lastIndex = match.index + match[0].length;
-		}
-
-		// Add remaining plain text
-		if (lastIndex < text.length) {
-			container.appendText(this.stripMarkdown(text.slice(lastIndex)));
-		}
-	}
-
-	/**
-	 * Strip inline markdown formatting, keeping just the text content.
-	 */
-	private stripMarkdown(text: string): string {
-		return text
-			.replace(/==([^=]+)==/g, "$1")       // ==highlights==
-			.replace(/\*\*([^*]+)\*\*/g, "$1")   // **bold**
-			.replace(/__([^_]+)__/g, "$1")        // __bold__
-			.replace(/\*([^*]+)\*/g, "$1")        // *italic*
-			.replace(/_([^_]+)_/g, "$1")          // _italic_
-			.replace(/~~([^~]+)~~/g, "$1")        // ~~strikethrough~~
-			.replace(/`([^`]+)`/g, "$1");         // `code`
 	}
 
 	private async toggleTask(task: Task): Promise<void> {
