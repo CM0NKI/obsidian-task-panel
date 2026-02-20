@@ -1,1 +1,113 @@
-/* Task Panel styles - will be populated in a later commit */
+.task-panel-container {
+	padding: 0;
+}
+
+.task-panel-header {
+	padding: 8px 12px;
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.task-panel-title {
+	font-size: var(--font-ui-small);
+	font-weight: var(--font-semibold);
+	color: var(--text-normal);
+}
+
+.task-panel-empty {
+	padding: 24px 12px;
+	text-align: center;
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+}
+
+.task-panel-list {
+	padding: 4px 0;
+}
+
+/* Collapsible heading groups */
+.task-panel-group {
+	margin: 0;
+}
+
+.task-panel-group-heading {
+	display: flex;
+	align-items: center;
+	padding: 4px 12px;
+	cursor: pointer;
+	user-select: none;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	font-weight: var(--font-semibold);
+}
+
+.task-panel-group-heading:hover {
+	background: var(--background-modifier-hover);
+}
+
+.task-panel-heading-count {
+	color: var(--text-faint);
+	font-weight: var(--font-normal);
+}
+
+/* Remove default details marker and use custom triangle */
+.task-panel-group > summary {
+	list-style: none;
+}
+
+.task-panel-group > summary::-webkit-details-marker {
+	display: none;
+}
+
+.task-panel-group > summary::before {
+	content: "";
+	display: inline-block;
+	width: 0;
+	height: 0;
+	margin-right: 6px;
+	border-left: 5px solid var(--text-faint);
+	border-top: 4px solid transparent;
+	border-bottom: 4px solid transparent;
+	transition: transform 100ms ease-in-out;
+	flex-shrink: 0;
+}
+
+.task-panel-group[open] > summary::before {
+	transform: rotate(90deg);
+}
+
+/* Task list and rows */
+.task-panel-task-list {
+	padding: 0;
+}
+
+.task-panel-task-row {
+	display: flex;
+	align-items: flex-start;
+	padding: 3px 12px;
+	gap: 6px;
+	cursor: pointer;
+}
+
+.task-panel-task-row:hover {
+	background: var(--background-modifier-hover);
+}
+
+.task-panel-task-row .task-list-item-checkbox {
+	margin: 0;
+	margin-top: 3px;
+	flex-shrink: 0;
+	cursor: pointer;
+}
+
+.task-panel-task-text {
+	font-size: var(--font-ui-small);
+	color: var(--text-normal);
+	line-height: 1.5;
+	word-break: break-word;
+}
+
+/* Completed tasks */
+.task-panel-completed .task-panel-task-text {
+	text-decoration: line-through;
+	color: var(--text-muted);
+}
