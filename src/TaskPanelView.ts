@@ -86,20 +86,25 @@ export class TaskPanelView extends ItemView {
 		container.addClass("task-panel-container");
 
 		if (!this.currentFile) {
-			this.renderEmpty("No active note");
+			this.renderEmpty("No active note.");
 			return;
 		}
 
 		if (this.currentFile.extension !== "md") {
-			this.renderEmpty("Not a markdown file");
+			this.renderEmpty("Not a markdown file.");
 			return;
 		}
 
-		const { groups, totalOpen } = await parseTasks(this.app, this.currentFile);
+		const { groups, totalOpen, totalCompleted } = await parseTasks(this.app, this.currentFile);
 		const { showCompleted, groupByHeading } = this.plugin.settings;
 
+		if (totalOpen === 0 && totalCompleted === 0) {
+			this.renderEmpty("No tasks found.");
+			return;
+		}
+
 		if (totalOpen === 0 && !showCompleted) {
-			this.renderEmpty("No open tasks");
+			this.renderEmpty("No open tasks found.");
 			return;
 		}
 
@@ -113,7 +118,7 @@ export class TaskPanelView extends ItemView {
 	}
 
 	private renderEmpty(message: string): void {
-		this.contentEl.createDiv({ cls: "task-panel-empty", text: message });
+		this.contentEl.createDiv({ cls: "pane-empty", text: message });
 	}
 
 	private renderGrouped(
@@ -130,7 +135,7 @@ export class TaskPanelView extends ItemView {
 			const summary = details.createEl("summary", { cls: "task-panel-group-heading" });
 			summary.createSpan({ text: group.heading, cls: "task-panel-heading-text" });
 
-			const taskList = details.createDiv({ cls: "task-panel-task-list" });
+			const taskList = details.createDiv({ cls: "task-panel-task-list", attr: { role: "list" } });
 			this.renderTaskList(taskList, group.openTasks, 0);
 
 			if (showCompleted) {
@@ -144,7 +149,7 @@ export class TaskPanelView extends ItemView {
 		groups: TaskGroup[],
 		showCompleted: boolean
 	): void {
-		const taskList = container.createDiv({ cls: "task-panel-task-list" });
+		const taskList = container.createDiv({ cls: "task-panel-task-list", attr: { role: "list" } });
 		for (const group of groups) {
 			this.renderTaskList(taskList, group.openTasks, 0);
 		}
@@ -165,15 +170,31 @@ export class TaskPanelView extends ItemView {
 	// -- Single task row -------------------------------------------------
 
 	private renderTask(container: HTMLElement, task: Task, depth: number): void {
-		const row = container.createDiv({ cls: "task-panel-task-row" });
+		const row = container.createDiv({
+			cls: "task-panel-task-row",
+			attr: {
+				tabindex: "0",
+				role: "listitem",
+				"aria-label": task.completed
+					? `Completed: ${task.text}`
+					: task.text,
+			},
+		});
 		if (depth > 0) {
-			row.style.paddingLeft = `${depth * 20}px`;
+			row.dataset.depth = String(depth);
 		}
 		if (task.completed) {
 			row.addClass("task-panel-completed");
 		}
 
-		const checkbox = row.createEl("input", { attr: { type: "checkbox" } });
+		const checkbox = row.createEl("input", {
+			attr: {
+				type: "checkbox",
+				"aria-label": task.completed
+					? `Mark "${task.text}" as incomplete`
+					: `Mark "${task.text}" as complete`,
+			},
+		});
 		checkbox.checked = task.completed;
 		checkbox.addClass("task-list-item-checkbox");
 		checkbox.addEventListener("click", (e) => {
@@ -188,6 +209,13 @@ export class TaskPanelView extends ItemView {
 
 		row.addEventListener("click", (e) => {
 			this.handleRowClick(e, checkbox, task);
+		});
+
+		row.addEventListener("keydown", (e) => {
+			if (e.key === "Enter" || e.key === " ") {
+				e.preventDefault();
+				this.scrollToTask(task);
+			}
 		});
 	}
 
@@ -265,18 +293,19 @@ export class TaskPanelView extends ItemView {
 	private async toggleTask(task: Task): Promise<void> {
 		if (!this.currentFile) return;
 
-		const content = await this.app.vault.read(this.currentFile);
-		const lines = content.split("\n");
-		const line = lines[task.line];
-		if (line === undefined) return;
+		await this.app.vault.process(this.currentFile, (content) => {
+			const lines = content.split("\n");
+			const line = lines[task.line];
+			if (line === undefined) return content;
 
-		if (task.completed) {
-			lines[task.line] = line.replace(/\[.\]/, "[ ]");
-		} else {
-			lines[task.line] = line.replace(/\[ \]/, "[x]");
-		}
+			if (task.completed) {
+				lines[task.line] = line.replace(/\[.\]/, "[ ]");
+			} else {
+				lines[task.line] = line.replace(/\[ \]/, "[x]");
+			}
 
-		await this.app.vault.modify(this.currentFile, lines.join("\n"));
+			return lines.join("\n");
+		});
 	}
 
 	// -- Scroll to task --------------------------------------------------
@@ -334,8 +363,9 @@ export class TaskPanelView extends ItemView {
 		if (!activeLine) return;
 
 		activeLine.addClass("task-panel-flash");
-		setTimeout(() => {
+		const timeoutId: number = window.setTimeout(() => {
 			activeLine.removeClass("task-panel-flash");
 		}, 1500);
+		this.register(() => window.clearTimeout(timeoutId));
 	}
 }

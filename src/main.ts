@@ -42,7 +42,7 @@ export default class TaskPanelPlugin extends Plugin {
 	}
 
 	onunload(): void {
-		this.app.workspace.detachLeavesOfType(VIEW_TYPE_TASK_PANEL);
+		// Obsidian handles leaf cleanup automatically — do not detach leaves here
 	}
 
 	async loadSettings(): Promise<void> {
