@@ -139,10 +139,6 @@ export class TaskPanelView extends ItemView {
 
 			const summary = details.createEl("summary", { cls: "task-panel-group-heading" });
 			summary.createSpan({ text: group.heading, cls: "task-panel-heading-text" });
-			summary.createSpan({
-				text: ` (${openTasks.length})`,
-				cls: "task-panel-heading-count",
-			});
 
 			const taskList = details.createDiv({ cls: "task-panel-task-list" });
 			const sorted = this.sortTasks(openTasks, sortOrder);

@@ -33,11 +33,6 @@
 	background: var(--background-modifier-hover);
 }
 
-.task-panel-heading-count {
-	color: var(--text-faint);
-	font-weight: var(--font-normal);
-}
-
 /* Remove default details marker and use custom triangle */
 .task-panel-group > summary {
 	list-style: none;
