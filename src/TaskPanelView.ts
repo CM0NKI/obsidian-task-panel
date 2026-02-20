@@ -261,16 +261,31 @@ export class TaskPanelView extends ItemView {
 
 		const editor = target.editor;
 		editor.setCursor({ line: task.line, ch: 0 });
-		editor.scrollIntoView(
-			{ from: { line: task.line, ch: 0 }, to: { line: task.line, ch: 0 } },
-			true
-		);
 
-		// Briefly highlight the line
-		editor.setSelection(
-			{ line: task.line, ch: 0 },
-			{ line: task.line, ch: editor.getLine(task.line).length }
-		);
+		// Scroll the task to the center of the editor
+		const editorEl = (editor as unknown as { cm: { scrollDOM: HTMLElement } }).cm?.scrollDOM;
+		if (editorEl) {
+			const lineInfo = editor.lineCount();
+			const coords = editor.posToOffset({ line: task.line, ch: 0 });
+			// Use requestAnimationFrame to let the cursor settle before scrolling
+			requestAnimationFrame(() => {
+				const cursorEl = editorEl.querySelector(".cm-cursor, .cm-activeLine");
+				if (cursorEl) {
+					cursorEl.scrollIntoView({ block: "center", behavior: "smooth" });
+				} else {
+					// Fallback: use scrollIntoView with center approximation
+					editor.scrollIntoView(
+						{ from: { line: task.line, ch: 0 }, to: { line: task.line, ch: 0 } },
+						true
+					);
+				}
+			});
+		} else {
+			editor.scrollIntoView(
+				{ from: { line: task.line, ch: 0 }, to: { line: task.line, ch: 0 } },
+				true
+			);
+		}
 	}
 
 	/**
