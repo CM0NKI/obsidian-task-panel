@@ -2,17 +2,6 @@
 	padding: 0;
 }
 
-.task-panel-header {
-	padding: 8px 12px;
-	border-bottom: 1px solid var(--background-modifier-border);
-}
-
-.task-panel-title {
-	font-size: var(--font-ui-small);
-	font-weight: var(--font-semibold);
-	color: var(--text-normal);
-}
-
 .task-panel-empty {
 	padding: 24px 12px;
 	text-align: center;

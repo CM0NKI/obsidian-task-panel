@@ -97,12 +97,7 @@ export class TaskPanelView extends ItemView {
 		const groups = await parseTasks(this.app, this.currentFile);
 		const { showCompleted, groupByHeading, sortOrder } = this.plugin.settings;
 
-		// Count open tasks across all groups
 		const openCount = countTasks(groups, false);
-
-		// Header
-		const header = container.createDiv({ cls: "task-panel-header" });
-		header.createSpan({ text: `Tasks (${openCount})`, cls: "task-panel-title" });
 
 		if (openCount === 0 && !showCompleted) {
 			this.renderEmpty("No open tasks");
