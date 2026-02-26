@@ -86,7 +86,7 @@
 
 .task-panel-task-text {
 	font-size: var(--font-ui-small);
-	color: var(--text-normal);
+	color: var(--text-muted);
 	line-height: 1.5;
 	word-break: break-word;
 	min-width: 0;
@@ -108,11 +108,11 @@
 
 .task-panel-task-text strong {
 	font-weight: var(--font-semibold);
-	color: var(--bold-color, var(--text-normal));
+	color: var(--bold-color, var(--text-muted));
 }
 
 .task-panel-task-text em {
-	color: var(--italic-color, var(--text-normal));
+	color: var(--italic-color, var(--text-muted));
 }
 
 .task-panel-task-text code {
@@ -145,7 +145,7 @@
 /* Completed tasks */
 .task-panel-completed .task-panel-task-text {
 	text-decoration: line-through;
-	color: var(--text-muted);
+	color: var(--text-faint);
 }
 
 /* Flash highlight when navigating to a task in the editor */
